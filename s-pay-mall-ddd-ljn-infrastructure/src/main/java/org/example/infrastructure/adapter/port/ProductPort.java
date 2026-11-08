@@ -6,6 +6,9 @@ import org.example.infrastructure.gateway.ProductRPC;
 import org.example.infrastructure.gateway.dto.ProductDTO;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author dabuw
  * @description
@@ -22,7 +25,19 @@ public class ProductPort implements IProductPort {
 
     @Override
     public ProductEntity queryProductByProductId(String productId) {
-        ProductDTO productDTO = productRPC.queryProductByProductId(productId);
+        return toEntity(productRPC.queryProductByProductId(productId));
+    }
+
+    @Override
+    public List<ProductEntity> queryProductList() {
+        List<ProductEntity> list = new ArrayList<>();
+        for (ProductDTO productDTO : productRPC.queryProductList()) {
+            list.add(toEntity(productDTO));
+        }
+        return list;
+    }
+
+    private ProductEntity toEntity(ProductDTO productDTO) {
         return ProductEntity.builder()
                 .productId(productDTO.getProductId())
                 .productName(productDTO.getProductName())

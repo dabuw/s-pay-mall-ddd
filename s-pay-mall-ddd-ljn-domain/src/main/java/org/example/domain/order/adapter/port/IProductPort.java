@@ -2,6 +2,8 @@ package org.example.domain.order.adapter.port;
 
 import org.example.domain.order.model.entity.ProductEntity;
 
+import java.util.List;
+
 /**
  * @author dabuw
  * @description
@@ -9,5 +11,7 @@ import org.example.domain.order.model.entity.ProductEntity;
  */
 public interface IProductPort {
     ProductEntity queryProductByProductId(String productId);
+
+    List<ProductEntity> queryProductList();
 
 }

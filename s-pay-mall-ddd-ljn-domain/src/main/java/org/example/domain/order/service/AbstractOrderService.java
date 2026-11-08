@@ -12,6 +12,7 @@ import org.example.domain.order.model.entity.ShopCarEntity;
 import org.example.domain.order.model.valobj.OrderStatusVO;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * @author dabuw
@@ -71,6 +72,16 @@ public abstract class AbstractOrderService implements IOrderService {
                 .build();
     }
 
+
+    @Override
+    public OrderEntity queryOrder(String orderId) {
+        return repository.queryOrderByOrderId(orderId);
+    }
+
+    @Override
+    public List<OrderEntity> queryOrderList(String userId) {
+        return repository.queryOrderList(userId, 50);
+    }
 
     protected abstract void doSaveOrder(CreateOrderAggregate orderAggregate);
 

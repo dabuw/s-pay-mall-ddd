@@ -43,3 +43,10 @@ build/
 
 ### runtime logs ###
 **/data/log/
+
+### frontend ###
+node_modules/
+dist/
+.vite/
+### app logs ###
+docs/dev-ops/log/

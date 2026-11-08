@@ -22,6 +22,8 @@ import javax.annotation.Resource;
 @RequestMapping("/api/v1/weixin/portal/")
 public class WeixinPortalController {
 
+    private static final String QR_SCENE_PREFIX = "qrscene_";
+
     @Value("${weixin.config.originalid}")
     private String originalid;
     @Value("${weixin.config.token}")
@@ -64,9 +66,12 @@ public class WeixinPortalController {
             // 消息转换
             MessageTextEntity message = XmlUtil.xmlToBean(requestBody, MessageTextEntity.class);
 
-            if ("event".equals(message.getMsgType()) && "SCAN".equals(message.getEvent())) {
-                loginService.saveLoginState(message.getTicket(), openid);
-                return buildMessageTextEntity(openid, "登录成功");
+            if ("event".equals(message.getMsgType())) {
+                String sceneId = resolveSceneId(message.getEvent(), message.getEventKey());
+                if (null != sceneId) {
+                    loginService.saveLoginState(sceneId, openid);
+                    return buildMessageTextEntity(openid, "登录成功");
+                }
             }
 
             return buildMessageTextEntity(openid, "你好，" + message.getContent());
@@ -74,6 +79,23 @@ public class WeixinPortalController {
             log.error("接收微信公众号信息请求{}失败 {}", openid, requestBody, e);
             return "";
         }
+    }
+
+
+    /**
+     * 解析扫码事件中的场景值
+     * <p>
+     * 已关注用户扫码：Event=SCAN，EventKey=100601
+     * 未关注用户扫码：Event=subscribe，EventKey=qrscene_100601
+     */
+    private String resolveSceneId(String event, String eventKey) {
+        if (StringUtils.isBlank(event) || StringUtils.isBlank(eventKey)) {
+            return null;
+        }
+        if (!"SCAN".equals(event) && !"subscribe".equals(event)) {
+            return null;
+        }
+        return eventKey.startsWith(QR_SCENE_PREFIX) ? eventKey.substring(QR_SCENE_PREFIX.length()) : eventKey;
     }
 
     private String buildMessageTextEntity(String openid, String content) {

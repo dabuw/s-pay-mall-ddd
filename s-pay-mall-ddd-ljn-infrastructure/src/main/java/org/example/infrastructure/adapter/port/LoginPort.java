@@ -10,7 +10,6 @@ import org.example.infrastructure.gateway.dto.WeixinTokenResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import retrofit2.Call;
-import retrofit2.Response;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -19,12 +18,10 @@ import java.util.Map;
 
 /**
  * @author dabuw
- * @description
+ * @description 微信公众号登录能力实现
  * @date 11/10/26
  */
-
 @Service
-
 public class LoginPort implements ILoginPort {
 
     @Value("${weixin.config.app-id}")
@@ -41,46 +38,33 @@ public class LoginPort implements ILoginPort {
     private IWeixinApiService weixinApiService;
 
     @Override
-    public String createQrCodeTicket() throws IOException {
+    public String createQrCodeTicket(int sceneId) throws IOException {
         // 1. 获取 accessToken
-        String accessToken = weixinAccessToken.getIfPresent(appid);
-        if (null == accessToken) {
-            Call<WeixinTokenResponseDTO> call = weixinApiService.getToken("client_credential", appid, appSecret);
-            WeixinTokenResponseDTO weixinTokenRes = call.execute().body();
-            assert weixinTokenRes != null;
-            accessToken = weixinTokenRes.getAccess_token();
-            weixinAccessToken.put(appid, accessToken);
-        }
-        // 2. 生成 ticket
+        String accessToken = getAccessToken();
+
+        // 2. 生成带参临时二维码，sceneId 用于关联扫码事件
         WeixinQrCodeRequestDTO weixinQrCodeReq = WeixinQrCodeRequestDTO.builder()
-                .expire_seconds(2592000)
+                .expire_seconds(300)
                 .action_name(WeixinQrCodeRequestDTO.ActionNameTypeVO.QR_SCENE.getCode())
                 .action_info(WeixinQrCodeRequestDTO.ActionInfo.builder()
                         .scene(WeixinQrCodeRequestDTO.ActionInfo.Scene.builder()
-                                .scene_id(100601)
+                                .scene_id(sceneId)
                                 .build())
                         .build())
                 .build();
 
         Call<WeixinQrCodeResponseDTO> call = weixinApiService.createQrCode(accessToken, weixinQrCodeReq);
         WeixinQrCodeResponseDTO weixinQrCodeRes = call.execute().body();
-        assert null != weixinQrCodeRes;
+        if (null == weixinQrCodeRes || null == weixinQrCodeRes.getTicket()) {
+            throw new IOException("生成微信二维码失败，请检查公众号配置");
+        }
         return weixinQrCodeRes.getTicket();
     }
 
     @Override
     public void sendLoginTemplate(String openid) throws IOException {
-        // 1. 获取 accessToken 【实际业务场景，按需处理下异常】
-        String accessToken = weixinAccessToken.getIfPresent(appid);
-        if (null == accessToken){
-            Call<WeixinTokenResponseDTO> call = weixinApiService.getToken("client_credential", appid, appSecret);
-            WeixinTokenResponseDTO weixinTokenRes = call.execute().body();
-            assert weixinTokenRes != null;
-            accessToken = weixinTokenRes.getAccess_token();
-            weixinAccessToken.put(appid, accessToken);
-        }
+        String accessToken = getAccessToken();
 
-        // 2. 发送模板消息
         Map<String, Map<String, String>> data = new HashMap<>();
         WeixinTemplateMessageDTO.put(data, WeixinTemplateMessageDTO.TemplateKey.USER, openid);
 
@@ -90,6 +74,24 @@ public class LoginPort implements ILoginPort {
 
         Call<Void> call = weixinApiService.sendMessage(accessToken, templateMessageDTO);
         call.execute();
+    }
+
+    /**
+     * 获取并缓存 accessToken
+     */
+    private String getAccessToken() throws IOException {
+        String accessToken = weixinAccessToken.getIfPresent(appid);
+        if (null != accessToken) {
+            return accessToken;
+        }
+        Call<WeixinTokenResponseDTO> call = weixinApiService.getToken("client_credential", appid, appSecret);
+        WeixinTokenResponseDTO weixinTokenRes = call.execute().body();
+        if (null == weixinTokenRes || null == weixinTokenRes.getAccess_token()) {
+            throw new IOException("获取微信 access_token 失败，请检查 appId / appSecret");
+        }
+        accessToken = weixinTokenRes.getAccess_token();
+        weixinAccessToken.put(appid, accessToken);
+        return accessToken;
     }
 
 }
