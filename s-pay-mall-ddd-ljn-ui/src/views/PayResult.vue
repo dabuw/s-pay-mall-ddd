@@ -12,6 +12,9 @@ const order = ref(null)
 const loading = ref(true)
 const error = ref('')
 const polling = ref(false)
+// 等待超过一定时间后，提示“支付宝沙箱可能维护中”
+const slowPayment = ref(false)
+let slowTimer = null
 
 let timer = null
 let attempts = 0
@@ -25,6 +28,9 @@ async function fetchStatus(silent = false) {
   try {
     order.value = await getOrderStatus(orderId)
     error.value = ''
+    if (isFinal(order.value?.orderStatusVO)) {
+      slowPayment.value = false
+    }
     if (!isFinal(order.value?.orderStatusVO)) {
       startPolling()
     } else {
@@ -63,12 +69,35 @@ function stopPolling() {
   polling.value = false
 }
 
+/** 用订单里保存的支付表单重新打开支付宝收银台 */
+function reopenPay() {
+  const html = order.value && order.value.payUrl
+  if (!html) {
+    error.value = '这条订单没有可用的支付链接，请返回商城重新下单'
+    return
+  }
+  const payWindow = window.open('', '_blank')
+  if (payWindow) {
+    payWindow.document.open()
+    payWindow.document.write(html)
+    payWindow.document.close()
+  } else {
+    error.value = '浏览器拦截了弹窗，请允许本站弹出窗口后重试'
+  }
+}
+
 function retryPayment() {
   router.push({ name: 'home' })
 }
 
-onMounted(() => fetchStatus())
-onBeforeUnmount(stopPolling)
+onMounted(() => {
+  fetchStatus()
+  slowTimer = setTimeout(() => { slowPayment.value = true }, 25000)
+})
+onBeforeUnmount(() => {
+  stopPolling()
+  if (slowTimer) clearTimeout(slowTimer)
+})
 </script>
 
 <template>
@@ -122,6 +151,18 @@ onBeforeUnmount(stopPolling)
                   : '已跳转支付宝收银台，完成支付后本页会自动刷新'
             }}
           </p>
+
+          <div
+            v-if="slowPayment && order && (order.orderStatusVO === 'PAY_WAIT' || order.orderStatusVO === 'CREATE')"
+            class="warn-tip"
+          >
+            <p class="warn-title">⚠️ 收银台提示「系统繁忙 / 系统有点儿忙」？</p>
+            <p class="warn-desc">
+              那不是商城的问题，通常是<strong>支付宝沙箱维护中</strong>。可以过一会儿再试，
+              或点下面按钮重新打开支付页。
+            </p>
+            <button class="btn btn-ghost btn-sm" @click="reopenPay">重新打开支付页</button>
+          </div>
 
           <div v-if="polling" class="sandbox-tip">
             <p class="sandbox-title">沙箱收银台测试账号</p>
@@ -227,6 +268,34 @@ onBeforeUnmount(stopPolling)
   margin: 0;
   color: var(--text-2);
   font-size: 14px;
+}
+
+.warn-tip {
+  margin: 18px auto 0;
+  padding: 14px 16px;
+  max-width: 420px;
+  border: 1px solid rgba(247, 144, 9, 0.35);
+  border-radius: 10px;
+  background: #fffaf0;
+  text-align: left;
+}
+
+.warn-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.warn-desc {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+.warn-desc strong {
+  color: #b45309;
 }
 
 .sandbox-tip {

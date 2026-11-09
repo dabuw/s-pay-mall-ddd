@@ -55,11 +55,9 @@ alipay:
   notify_url: http://dabuw.nat100.top/api/v1/alipay/alipay_notify_url
   return_url: https://dabuw.online
   gatewayUrl: https://openapi-sandbox.dl.alipaydev.com/gateway.do
-  # 支付方式：page=电脑网站支付（默认），wap=手机网站支付（可用）
-  # TODO(2026-11-08) 临时使用 wap 绕过沙箱故障：支付宝沙箱电脑网站支付 alipay.trade.page.pay 会跳转
-  #   收银台报 SYSTEM_ERROR（官方社区大量反馈，见 https://open.alipay.com/portal/forum/post/243901017）。
-  #   待沙箱恢复后改回 pay_mode: page，并回归验证电脑网站支付。
-  pay_mode: wap
+  # 支付方式：page=电脑网站支付（默认），wap=手机网站支付
+  # 2026-11-09 已切回 page：手机版收银台在桌面浏览器体验较差
+  pay_mode: page
 
 # 日志
 logging:
