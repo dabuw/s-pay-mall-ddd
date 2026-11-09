@@ -58,15 +58,16 @@ async function buy(product) {
       payWindow.document.write(formHtml)
       payWindow.document.close()
     } else {
-      // 弹窗被拦截时退化为当前页提交
-      document.open()
-      document.write(formHtml)
-      document.close()
-      return
+      // 弹窗被拦截：不跳走，留在商城，由结果页的「打开支付页」按钮兜底
+      console.warn('支付页弹窗被拦截')
     }
 
     if (orderId) {
-      router.push({ name: 'result', params: { orderId } })
+      router.push({
+        name: 'result',
+        params: { orderId },
+        query: payWindow ? {} : { blocked: '1' },
+      })
     }
   } catch (e) {
     error.value = e.message

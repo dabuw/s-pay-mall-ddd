@@ -92,7 +92,12 @@ function retryPayment() {
 
 onMounted(() => {
   fetchStatus()
-  slowTimer = setTimeout(() => { slowPayment.value = true }, 25000)
+  // 弹窗被拦截，或等待超过 8 秒还没付成功，都直接给出提示
+  if (route.query.blocked === '1') {
+    slowPayment.value = true
+  } else {
+    slowTimer = setTimeout(() => { slowPayment.value = true }, 8000)
+  }
 })
 onBeforeUnmount(() => {
   stopPolling()
@@ -156,10 +161,10 @@ onBeforeUnmount(() => {
             v-if="slowPayment && order && (order.orderStatusVO === 'PAY_WAIT' || order.orderStatusVO === 'CREATE')"
             class="warn-tip"
           >
-            <p class="warn-title">⚠️ 收银台提示「系统繁忙 / 系统有点儿忙」？</p>
+            <p class="warn-title">⚠️ 收银台打不开，或提示「系统繁忙 / 504」？</p>
             <p class="warn-desc">
-              那不是商城的问题，通常是<strong>支付宝沙箱维护中</strong>。可以过一会儿再试，
-              或点下面按钮重新打开支付页。
+              这不是商城的问题，是<strong>支付宝沙箱收单服务维护中</strong>。可以过一会儿再试，
+              或点下面的按钮重新打开支付页。
             </p>
             <button class="btn btn-ghost btn-sm" @click="reopenPay">重新打开支付页</button>
           </div>
@@ -207,9 +212,9 @@ onBeforeUnmount(() => {
             <button
               v-if="order.orderStatusVO === 'PAY_WAIT' || order.orderStatusVO === 'CREATE'"
               class="btn"
-              @click="retryPayment"
+              @click="reopenPay"
             >
-              继续逛逛
+              重新打开支付页
             </button>
             <button v-else class="btn" @click="router.push({ name: 'home' })">再买一件</button>
           </div>
