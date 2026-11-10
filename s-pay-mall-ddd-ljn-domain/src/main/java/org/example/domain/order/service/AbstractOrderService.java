@@ -36,10 +36,15 @@ public abstract class AbstractOrderService implements IOrderService {
         OrderEntity unpaidOrderEntity = repository.queryUnPayOrder(shopCarEntity);
 
         if (null != unpaidOrderEntity && OrderStatusVO.PAY_WAIT.equals(unpaidOrderEntity.getOrderStatusVO())) {
-            log.info("创建订单-存在，已存在未支付订单。userId:{} productId:{} orderId:{}", shopCarEntity.getUserId(), shopCarEntity.getProductId(), unpaidOrderEntity.getOrderId());
+            // 复用未支付订单，但重新生成支付表单：旧的 payUrl 签名里带 timestamp，
+            // 放久了（例如支付宝沙箱故障期间生成）再提交会被判为过期/无效。
+            log.info("创建订单-存在未支付订单，重新生成支付链接。userId:{} productId:{} orderId:{}",
+                    shopCarEntity.getUserId(), shopCarEntity.getProductId(), unpaidOrderEntity.getOrderId());
+            PayOrderEntity refreshed = doPrepayOrder(shopCarEntity.getUserId(), shopCarEntity.getProductId(),
+                    unpaidOrderEntity.getProductName(), unpaidOrderEntity.getOrderId(), unpaidOrderEntity.getTotalAmount());
             return PayOrderEntity.builder()
-                    .orderId(unpaidOrderEntity.getOrderId())
-                    .payUrl(unpaidOrderEntity.getPayUrl())
+                    .orderId(refreshed.getOrderId())
+                    .payUrl(refreshed.getPayUrl())
                     .build();
         } else if (null != unpaidOrderEntity && OrderStatusVO.CREATE.equals(unpaidOrderEntity.getOrderStatusVO())) {
             log.info("创建订单-存在，存在未创建支付单订单，创建支付单开始 userId:{} productId:{} orderId:{}", shopCarEntity.getUserId(), shopCarEntity.getProductId(), unpaidOrderEntity.getOrderId());
