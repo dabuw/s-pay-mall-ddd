@@ -39,14 +39,14 @@ weixin:
     originalid: gh_f81ffc22a71a
     token: b8b6
     app-id: wxeb9d832b7cde6b57
-    app-secret: ${WEIXIN_APP_SECRET}
+    app-secret: "${WEIXIN_APP_SECRET}"
     template_id: ULlfzE7yTwAJz1HQCLtSPX62uf9ARK3JmUV2Y7UV5As
 
 alipay:
   enabled: true
   app_id: 9021000166625040
-  merchant_private_key: ${ALIPAY_MERCHANT_PRIVATE_KEY}
-  alipay_public_key: ${ALIPAY_PUBLIC_KEY}
+  merchant_private_key: "${ALIPAY_MERCHANT_PRIVATE_KEY}"
+  alipay_public_key: "${ALIPAY_PUBLIC_KEY}"
   notify_url: http://dabuw.nat100.top/api/v1/alipay/alipay_notify_url
   return_url: https://dabuw.online
   gatewayUrl: https://openapi-sandbox.dl.alipaydev.com/gateway.do
