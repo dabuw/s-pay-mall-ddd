@@ -68,8 +68,12 @@ public class NoPayNotifyOrderJob {
                 AlipayTradeQueryResponse response = query(orderId);
                 String code = response.getCode();
                 if ("10000".equals(code)) {
-                    // 查询成功：说明支付宝侧已支付，补一次状态
-                    orderService.changeOrderPaySuccess(orderId);
+                    // 注意：code=10000 只代表查询成功，是否已支付要看 trade_status。
+                    // 之前直接按 code 判断，会把 WAIT_BUYER_PAY 的订单误标成已支付。
+                    String tradeStatus = response.getTradeStatus();
+                    if ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus)) {
+                        orderService.changeOrderPaySuccess(orderId);
+                    }
                     consecutiveFailures.set(0);
                 } else {
                     // 20000 一般是平台异常（如 ACQ.SYSTEM_ERROR / aop.unknow-error）
